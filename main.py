@@ -50,6 +50,21 @@ def main():
     with open(dst, "wb") as fh:
         fh.write(data)
 
+    # Validate the written output file itself: it must still be a PNG
+    # within the size and dimension limits. Any mismatch is a hard
+    # failure (non-zero exit) so a bad copy is never reported as success.
+    with open(dst, "rb") as fh:
+        out = fh.read()
+    if len(out) > MAX_BYTES:
+        return fail("output entry.png is %d bytes, over the %d byte limit"
+                    % (len(out), MAX_BYTES))
+    if len(out) < 33 or out[:8] != PNG_SIGNATURE or out[12:16] != b"IHDR":
+        return fail("output entry.png failed PNG validation")
+    out_w, out_h = struct.unpack(">II", out[16:24])
+    if out_w > EXPECTED_WIDTH or out_h > EXPECTED_HEIGHT:
+        return fail("output entry.png is %dx%d, over the %dx%d limit"
+                    % (out_w, out_h, EXPECTED_WIDTH, EXPECTED_HEIGHT))
+
     print("wrote %s (%dx%d, %d bytes)" % (dst, width, height, len(data)))
     return 0
 
